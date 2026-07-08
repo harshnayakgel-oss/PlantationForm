@@ -79,15 +79,24 @@ content="width=device-width, initial-scale=1, viewport-fit=cover">
 
         </label>
 
-        <select
-            id="panchayat"
-            required>
+        <div class="comboBox">
 
-            <option value="">Loading Panchayats...</option>
+            <input
+                type="text"
+                id="panchayatInput"
+                placeholder="Type to search or select Panchayat"
+                autocomplete="off"
+                required>
 
-        </select>
+            <div
+                id="panchayatDropdown"
+                class="dropdownList">
+            </div>
+
+        </div>
 
     </div>
+
 
 
     <!-- ========================================================= -->
