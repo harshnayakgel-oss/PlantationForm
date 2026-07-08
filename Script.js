@@ -44,7 +44,7 @@ function loadPanchayats(){
 
         allPanchayats=result.data;
 
-        input.placeholder="Type to search or select Panchayat";
+        input.placeholder="Select Panchayat";
 
     })
 
@@ -66,23 +66,16 @@ function filterPanchayats(query){
 
     activeIndex=-1;
 
-    if(query===""){
-
-        dropdown.classList.remove("open");
-
-        return;
-
-    }
-
+    // Empty query = show the full list, so people who'd rather
+    // scroll (instead of type) can still browse every Panchayat,
+    // like a normal dropdown.
     const q=query.toLowerCase();
 
-    // Prefix match only — typing "a" then "sso" then "n" narrows
-    // step by step, same behaviour as the original request.
-    const matches=allPanchayats.filter(function(name){
-
-        return name.toLowerCase().startsWith(q);
-
-    });
+    const matches = q===""
+        ? allPanchayats
+        : allPanchayats.filter(function(name){
+            return name.toLowerCase().startsWith(q);
+        });
 
     if(matches.length===0){
 
@@ -172,9 +165,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
     input.addEventListener("focus",function(){
 
-        if(input.value.trim()!==""){
-            filterPanchayats(input.value.trim());
-        }
+        filterPanchayats(input.value.trim());
 
     });
 
