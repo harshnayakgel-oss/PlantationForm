@@ -1,4 +1,9 @@
-<script>
+// ======================================================
+// CONFIG — paste your Apps Script Web App /exec URL here
+// ======================================================
+
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE";
+
 
 window.onload=function(){
 
@@ -13,20 +18,28 @@ window.onload=function(){
 };
 
 // ======================================================
-// LOAD PANCHAYATS
+// LOAD PANCHAYATS (via fetch GET — replaces google.script.run)
 // ======================================================
 
 function loadPanchayats(){
 
-    google.script.run
+    fetch(API_URL + "?action=panchayats")
 
-    .withSuccessHandler(function(list){
+    .then(function(response){
+        return response.json();
+    })
+
+    .then(function(result){
+
+        if(!result.success){
+            throw new Error(result.message || "Failed to load Panchayats.");
+        }
 
         const dropdown=document.getElementById("panchayat");
 
         dropdown.innerHTML="<option value=''>-- Select Panchayat --</option>";
 
-        list.forEach(function(name){
+        result.data.forEach(function(name){
 
             const option=document.createElement("option");
 
@@ -40,13 +53,11 @@ function loadPanchayats(){
 
     })
 
-    .withFailureHandler(function(){
+    .catch(function(err){
 
-        alert("Unable to load Panchayat list.");
+        alert("Unable to load Panchayat list.\n\n" + err.message);
 
-    })
-
-    .getPanchayats();
+    });
 
 }
 
@@ -196,7 +207,8 @@ function fileToBase64(file){
 
 
 // ======================================================
-// Submit
+// Submit (single fetch POST — replaces the two
+// google.script.run calls to uploadPhoto + saveSubmission)
 // ======================================================
 
 async function submitForm(){
@@ -267,19 +279,15 @@ async function submitForm(){
 
     }
 
-    startLoading("Uploading Photo...");
+    startLoading("Uploading Photo & Saving Data...");
 
-    const file=photoInput.files[0];
+    try{
 
-    const base64=await fileToBase64(file);
+        const file=photoInput.files[0];
 
-    google.script.run
+        const base64=await fileToBase64(file);
 
-    .withSuccessHandler(function(uploadResult){
-
-        document.getElementById("loadingText").innerHTML="Saving Data...";
-
-        const data={
+        const payload={
 
             plantationDate:plantationDate,
 
@@ -295,43 +303,45 @@ async function submitForm(){
 
             longitude:longitude,
 
-            photoLink:uploadResult.url
+            photo:base64,
+
+            fileName:file.name
 
         };
 
-        google.script.run
+        // IMPORTANT: do NOT set a Content-Type header here.
+        // Leaving it as the browser default (text/plain) keeps this
+        // a "simple request" so the browser skips the CORS preflight
+        // (OPTIONS) call, which Apps Script Web Apps don't handle.
+        const response=await fetch(API_URL,{
 
-        .withSuccessHandler(function(){
+            method:"POST",
 
-            stopLoading();
+            body:JSON.stringify(payload)
 
-            alert("✅ Plantation details submitted successfully.");
+        });
 
-            clearForm();
+        const result=await response.json();
 
-        })
-
-        .withFailureHandler(function(err){
-
-            stopLoading();
-
-            alert(err.message);
-
-        })
-
-        .saveSubmission(data);
-
-    })
-
-    .withFailureHandler(function(err){
+        if(!result.success){
+            throw new Error(result.message || "Submission failed.");
+        }
 
         stopLoading();
 
-        alert(err.message);
+        alert("✅ Plantation details submitted successfully.");
 
-    })
+        clearForm();
 
-    .uploadPhoto(base64,file.name);
+    }
+
+    catch(err){
+
+        stopLoading();
+
+        alert("❌ " + err.message);
+
+    }
 
 }
 
@@ -382,5 +392,3 @@ document.addEventListener("keydown",function(e){
     }
 
 });
-
-</script>
