@@ -2,7 +2,7 @@
 // CONFIG — paste your Apps Script Web App /exec URL here
 // ======================================================
 
-const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE";
+const API_URL = "https://script.google.com/macros/s/AKfycbzNYRHaKiULgdeOzgoMNd7uJAqnhbqXXmIiJ5TXR1BPFe8Ca1Ni6IHpSvoZ7DdohJo/exec";
 
 
 window.onload=function(){
