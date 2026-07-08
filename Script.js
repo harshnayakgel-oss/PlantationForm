@@ -2,7 +2,7 @@
 // CONFIG — paste your Apps Script Web App /exec URL here
 // ======================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzNYRHaKiULgdeOzgoMNd7uJAqnhbqXXmIiJ5TXR1BPFe8Ca1Ni6IHpSvoZ7DdohJo/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE";
 
 
 window.onload=function(){
@@ -18,10 +18,17 @@ window.onload=function(){
 };
 
 // ======================================================
-// LOAD PANCHAYATS (via fetch GET — replaces google.script.run)
+// PANCHAYAT SEARCHABLE COMBOBOX
 // ======================================================
 
+let allPanchayats=[];       // full list fetched from the sheet
+let activeIndex=-1;         // currently highlighted suggestion (keyboard nav)
+
 function loadPanchayats(){
+
+    const input=document.getElementById("panchayatInput");
+
+    input.placeholder="Loading Panchayats...";
 
     fetch(API_URL + "?action=panchayats")
 
@@ -35,31 +42,212 @@ function loadPanchayats(){
             throw new Error(result.message || "Failed to load Panchayats.");
         }
 
-        const dropdown=document.getElementById("panchayat");
+        allPanchayats=result.data;
 
-        dropdown.innerHTML="<option value=''>-- Select Panchayat --</option>";
-
-        result.data.forEach(function(name){
-
-            const option=document.createElement("option");
-
-            option.value=name;
-
-            option.textContent=name;
-
-            dropdown.appendChild(option);
-
-        });
+        input.placeholder="Type to search or select Panchayat";
 
     })
 
     .catch(function(err){
+
+        input.placeholder="Unable to load Panchayats";
 
         alert("Unable to load Panchayat list.\n\n" + err.message);
 
     });
 
 }
+
+function filterPanchayats(query){
+
+    const dropdown=document.getElementById("panchayatDropdown");
+
+    dropdown.innerHTML="";
+
+    activeIndex=-1;
+
+    if(query===""){
+
+        dropdown.classList.remove("open");
+
+        return;
+
+    }
+
+    const q=query.toLowerCase();
+
+    // Prefix match only — typing "a" then "sso" then "n" narrows
+    // step by step, same behaviour as the original request.
+    const matches=allPanchayats.filter(function(name){
+
+        return name.toLowerCase().startsWith(q);
+
+    });
+
+    if(matches.length===0){
+
+        const empty=document.createElement("div");
+
+        empty.className="dropdownEmpty";
+
+        empty.textContent="No matching Panchayat";
+
+        dropdown.appendChild(empty);
+
+        dropdown.classList.add("open");
+
+        return;
+
+    }
+
+    matches.forEach(function(name){
+
+        const item=document.createElement("div");
+
+        item.className="dropdownItem";
+
+        item.textContent=name;
+
+        item.onclick=function(){
+
+            selectPanchayat(name);
+
+        };
+
+        dropdown.appendChild(item);
+
+    });
+
+    dropdown.classList.add("open");
+
+}
+
+function selectPanchayat(name){
+
+    const input=document.getElementById("panchayatInput");
+
+    input.value=name;
+
+    closePanchayatDropdown();
+
+}
+
+function closePanchayatDropdown(){
+
+    const dropdown=document.getElementById("panchayatDropdown");
+
+    dropdown.classList.remove("open");
+
+    dropdown.innerHTML="";
+
+    activeIndex=-1;
+
+}
+
+function highlightActive(items){
+
+    items.forEach(function(el,i){
+
+        el.classList.toggle("active",i===activeIndex);
+
+    });
+
+    if(activeIndex>=0 && items[activeIndex]){
+
+        items[activeIndex].scrollIntoView({block:"nearest"});
+
+    }
+
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+
+    const input=document.getElementById("panchayatInput");
+
+    input.addEventListener("input",function(){
+
+        filterPanchayats(input.value.trim());
+
+    });
+
+    input.addEventListener("focus",function(){
+
+        if(input.value.trim()!==""){
+            filterPanchayats(input.value.trim());
+        }
+
+    });
+
+    // Keyboard navigation within the dropdown (Up/Down/Enter/Escape).
+    // stopPropagation on Enter prevents the page-wide Enter-to-submit
+    // listener from firing when the user is really just picking a
+    // suggestion from the list.
+    input.addEventListener("keydown",function(e){
+
+        const dropdown=document.getElementById("panchayatDropdown");
+
+        if(!dropdown.classList.contains("open")) return;
+
+        const items=Array.from(dropdown.querySelectorAll(".dropdownItem"));
+
+        if(items.length===0) return;
+
+        if(e.key==="ArrowDown"){
+
+            e.preventDefault();
+
+            activeIndex=(activeIndex+1)%items.length;
+
+            highlightActive(items);
+
+        }
+
+        else if(e.key==="ArrowUp"){
+
+            e.preventDefault();
+
+            activeIndex=(activeIndex-1+items.length)%items.length;
+
+            highlightActive(items);
+
+        }
+
+        else if(e.key==="Enter"){
+
+            e.preventDefault();
+
+            e.stopPropagation();
+
+            if(activeIndex>=0){
+                selectPanchayat(items[activeIndex].textContent);
+            } else {
+                selectPanchayat(items[0].textContent);
+            }
+
+        }
+
+        else if(e.key==="Escape"){
+
+            closePanchayatDropdown();
+
+        }
+
+    });
+
+    // Close dropdown when clicking anywhere outside the combobox
+    document.addEventListener("click",function(e){
+
+        const comboBox=input.closest(".comboBox");
+
+        if(!comboBox.contains(e.target)){
+            closePanchayatDropdown();
+        }
+
+    });
+
+});
+
+
 
 // ======================================================
 // Capture Location
@@ -215,7 +403,7 @@ async function submitForm(){
 
     const plantationDate=document.getElementById("plantationDate").value;
 
-    const panchayat=document.getElementById("panchayat").value;
+    const panchayat=document.getElementById("panchayatInput").value.trim();
 
     const sarpanchName=document.getElementById("sarpanchName").value.trim();
 
@@ -242,6 +430,14 @@ async function submitForm(){
     if(panchayat===""){
 
         alert("Please select Panchayat.");
+
+        return;
+
+    }
+
+    if(!allPanchayats.includes(panchayat)){
+
+        alert("Please select a valid Panchayat from the list.");
 
         return;
 
@@ -355,7 +551,9 @@ function clearForm(){
 
     document.getElementById("plantationDate").valueAsDate=new Date();
 
-    document.getElementById("panchayat").selectedIndex=0;
+    document.getElementById("panchayatInput").value="";
+
+    closePanchayatDropdown();
 
     document.getElementById("sarpanchName").value="";
 
