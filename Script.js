@@ -169,6 +169,29 @@ document.addEventListener("DOMContentLoaded",function(){
 
     });
 
+    // Toggle button — click to open the full list, click again to close it
+    const toggleBtn=document.getElementById("panchayatToggle");
+
+    toggleBtn.addEventListener("click",function(e){
+
+        e.stopPropagation();
+
+        const dropdown=document.getElementById("panchayatDropdown");
+
+        if(dropdown.classList.contains("open")){
+
+            closePanchayatDropdown();
+
+        } else {
+
+            input.focus();
+
+            filterPanchayats(input.value.trim());
+
+        }
+
+    });
+
     // Keyboard navigation within the dropdown (Up/Down/Enter/Escape).
     // stopPropagation on Enter prevents the page-wide Enter-to-submit
     // listener from firing when the user is really just picking a
